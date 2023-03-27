@@ -5,6 +5,7 @@ import {
   Link,
   Routes
 } from "react-router-dom";
+import { ApolloProvider} from '@apollo/client';
 //
 // This app requires react-bootstrap and bootstrap installed: 
 //    npm install react-bootstrap bootstrap
@@ -27,12 +28,14 @@ import AllCourses from './components/AllCourses';
 import Home from './components/Home';
 import Login from './components/Login';
 import axios from 'axios';
+import client from './components/apollo'
 //
 function App() {
   const [userType, setUserType] = useState('')
   const [userName, setUserName] = useState('')
   const [studentObjId, setStudentObjId] = useState('')
 
+  
   const deleteCookie = async () => {
     try {
       await axios.get('/signout');
@@ -44,6 +47,7 @@ function App() {
   
 
   return (
+    <ApolloProvider client={client}>
     <Router>
       <Navbar bg="primary" variant="dark" expand="lg">
         <Container>
@@ -102,7 +106,7 @@ function App() {
       </div>
 
     </Router>
-
+    </ApolloProvider>
 
   );
 }

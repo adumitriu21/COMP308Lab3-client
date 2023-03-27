@@ -2,12 +2,20 @@ import React, { useState, useEffect } from 'react';
 //import ReactDOM from 'react-dom';
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
-import { GraphQLClient, gql } from 'graphql-request';
-
-//
-import axios from 'axios';
+import Cookies from 'js-cookie';
+import { useMutation, gql } from '@apollo/client';
 
 
+
+const AUTHENTICATE_USER = gql`
+  mutation AuthenticateUser($email: String!, $password: String!) {
+    authenticateUser(email: $email, password: $password) {
+      userType
+      userId
+      token
+    }
+  }
+`;
 
 
 //
@@ -15,68 +23,49 @@ function Login({setUserType, setUserName, setStudentObjId}) {
   //state variable for the screen, admin or user
   const [screen, setScreen] = useState('auth');
   const [responseMessage, setResponseMessage] = useState('');
-
+  const [loginMutation, { data }] = useMutation(AUTHENTICATE_USER);
   //store input field data, user name and password
   const [email, setEmail] = useState();
   const [password, setPassword] = useState();
-  const graphQLClient = new GraphQLClient('http://localhost:4000/graphql');
+ 
   //send username and password to the server
   // for initial authentication
-  const authenticateUser = async () => {
-    console.log('calling auth')
-    console.log(email)
-    try {
-      // Create a new GraphQL mutation to authenticate the user
-      const mutation = gql`
-        mutation AuthenticateUser($email: String!, $password: String!) {
-          authenticateUser(email: $email, password: $password) 
-        }
-      `;
-      
-      // Call the GraphQL mutation with the email and password variables
-      const variables = { email, password };
-      const data = await graphQLClient.request(mutation, variables);
-      
-      // Process the response
-      console.log(data);
-      if (data.authenticateUser.screen !== undefined) {
-        setScreen(data.authenticateUser.screen);
-        setUserType(data.authenticateUser.userType);
-  
-        if (data.authenticateUser.userType === 'Student') {
-          setStudentObjId(data.authenticateUser.studentObjId);
-        }
-        setUserName(data.authenticateUser.screen);
-        console.log(data.authenticateUser.screen);
-      }
-    } catch (e) { //print the error
-      console.log(e);
-      setResponseMessage("Invalid Login Credentials!")
-    }
-  };
-  //check if the user already logged-in
-  const readCookie = async () => {
-    try {
-      console.log('--- in readCookie function ---');
+  const handleLogin = async (event) => {
+    event.preventDefault();
+    const email = event.target.elements.email.value;
+    const password = event.target.elements.password.value;
 
-      //
-      const res = await axios.get('/read_cookie');
-      // 
-      if (res.data.screen !== undefined) {
-        setScreen(res.data.screen);
-        console.log(res.data)
-      }
-    } catch (e) {
-      setScreen('auth');
-      console.log(e);
+    try {
+      const { data } = await loginMutation({
+        variables: { email, password },
+      });
+
+      console.log(data.authenticateUser);
+
+        // Check if the authenticateUser mutation returned a valid token
+    if (data.authenticateUser.token) {
+      // Set the 'token' cookie using the 'js-cookie' library
+      Cookies.set('token', data.authenticateUser.token);
+      console.log(Cookies.get('token'));
+
+      // Redirect the user to the home page
+      window.location.href = '/';
+      setUserType(data.authenticateUser.userType);
+      setUserName(data.authenticateUser.userName);
+      setStudentObjId(data.authenticateUser.studentObjId);
+
+        // Log the token
+       
+
+    } else {
+      setResponseMessage('Invalid email or password');
+    }
+
+    } catch (error) {
+      setResponseMessage(error.message);
     }
   };
-  //runs the first time the view is rendered
-  //to check if user is signed in
-  useEffect(() => {
-    readCookie();
-  }, []); //only the first render
-  //
+  
   return (
     <div className="App">
       
@@ -85,7 +74,7 @@ function Login({setUserType, setUserName, setStudentObjId}) {
         ? <div>
           
 
-          <Form className="container-fluid" >
+          <Form className="container-fluid" onSubmit={handleLogin} >
               
               <Form.Group class="form-group">
                 <Form.Label>Email</Form.Label>
@@ -98,7 +87,7 @@ function Login({setUserType, setUserName, setStudentObjId}) {
 
               {responseMessage && <p>{responseMessage}</p>}
           
-              <Button variant="primary" type="Button" onClick={authenticateUser}>
+              <Button variant="primary" type="submit" >
                 Login
               </Button>
             </Form>
