@@ -2,9 +2,12 @@ import React, { useState, useEffect } from 'react';
 //import ReactDOM from 'react-dom';
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
+import { GraphQLClient, gql } from 'graphql-request';
 
 //
 import axios from 'axios';
+
+
 
 
 //
@@ -16,37 +19,41 @@ function Login({setUserType, setUserName, setStudentObjId}) {
   //store input field data, user name and password
   const [email, setEmail] = useState();
   const [password, setPassword] = useState();
-  const apiUrl = "http://localhost:3000/signin";
+  const graphQLClient = new GraphQLClient('http://localhost:4000/graphql');
   //send username and password to the server
   // for initial authentication
   const authenticateUser = async () => {
     console.log('calling auth')
     console.log(email)
     try {
-      //make a get request to /authenticate end-point on the server
-      const loginData = { auth: { email, password } }
-      //call api
-      const res = await axios.post(apiUrl, loginData);
-      console.log(res.data.auth)
-      console.log(res.data.screen)
-      //process the response
-      if (res.data.screen !== undefined) {
-        setScreen(res.data.screen);
-        setUserType(res.data.type);
-
-        if(res.data.type === 'Student'){
-          setStudentObjId(res.data.studentObjId)
+      // Create a new GraphQL mutation to authenticate the user
+      const mutation = gql`
+        mutation AuthenticateUser($email: String!, $password: String!) {
+          authenticateUser(email: $email, password: $password) 
         }
-        setUserName(res.data.screen);
-        console.log(res.data.screen);
+      `;
+      
+      // Call the GraphQL mutation with the email and password variables
+      const variables = { email, password };
+      const data = await graphQLClient.request(mutation, variables);
+      
+      // Process the response
+      console.log(data);
+      if (data.authenticateUser.screen !== undefined) {
+        setScreen(data.authenticateUser.screen);
+        setUserType(data.authenticateUser.userType);
+  
+        if (data.authenticateUser.userType === 'Student') {
+          setStudentObjId(data.authenticateUser.studentObjId);
+        }
+        setUserName(data.authenticateUser.screen);
+        console.log(data.authenticateUser.screen);
       }
     } catch (e) { //print the error
       console.log(e);
       setResponseMessage("Invalid Login Credentials!")
     }
-  
   };
-  
   //check if the user already logged-in
   const readCookie = async () => {
     try {
