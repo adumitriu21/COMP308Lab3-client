@@ -6,14 +6,11 @@ import {
   Routes
 } from "react-router-dom";
 import { ApolloProvider} from '@apollo/client';
-//
-// This app requires react-bootstrap and bootstrap installed: 
-//    npm install react-bootstrap bootstrap
-//
 import 'bootstrap/dist/css/bootstrap.min.css'
 import Navbar from 'react-bootstrap/Navbar';
 import Nav from 'react-bootstrap/Nav';
 import Container from 'react-bootstrap/Container';
+import Cookies from 'js-cookie';
 import './App.css';
 //
 import StudentList from './components/StudentList';
@@ -31,30 +28,30 @@ import axios from 'axios';
 import client from './components/apollo'
 //
 function App() {
-  const [userType, setUserType] = useState('')
-  const [userName, setUserName] = useState('')
-  const [studentObjId, setStudentObjId] = useState('')
+  const [userType, setUserType] = useState(localStorage.getItem('userType') || '');
+const [userName, setUserName] = useState(localStorage.getItem('userName') || '');
+const [studentObjId, setStudentObjId] = useState(localStorage.getItem('studentObjId') || '');
 
   
-  const deleteCookie = async () => {
-    try {
-      await axios.get('/signout');
-      setUserType('');
-    } catch (e) {
-      console.log(e);
-    }
-  };
+function logout() {
+  // Clear all items from local storage
+  localStorage.clear();
+  // Remove the 'token' cookie using the 'js-cookie' library
+  Cookies.remove('token');
+  // Redirect the user to the login page
+  window.location.href = '/login';
+}
   
 
   return (
     <ApolloProvider client={client}>
     <Router>
-      <Navbar bg="primary" variant="dark" expand="lg">
+      <Navbar bg="primary" variant="dark" expand="lg" key={`${userType}-${userName}`}>
         <Container>
         {userType === '' && (
           <Navbar.Brand href="#home">Welcome to Course Services</Navbar.Brand>
         )}
-         {(userType === 'Student' || userType === 'Admin') && (
+         {(userType === 'student' || userType === 'admin') && (
           <Navbar.Brand href="#home">Welcome {userName}</Navbar.Brand>
         )}
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
@@ -64,22 +61,22 @@ function App() {
               {userType === '' && (
               <Nav.Link as={Link} to="/login">Login</Nav.Link>
               )}
-              {userType === 'Admin' && (
+              {userType === 'admin' && (
               <Nav.Link as={Link} to="/students">List of Students</Nav.Link>
               )}
-              {userType === 'Student' && (
+              {userType === 'student' && (
               <Nav.Link as={Link} to="/courseList">Courses</Nav.Link>
               )}
-              {userType === 'Admin' && (
+              {userType === 'admin' && (
                   <Nav.Link as={Link} to="/create">Add Student</Nav.Link>
               )}
               {userType !== '' && (
-                <Nav.Link as={Link} to="/" onClick={deleteCookie}>Logout</Nav.Link>
+                <Nav.Link as={Link} to="/" onClick={logout}>Logout</Nav.Link>
               )}
-              {userType === "Admin" && (
+              {userType === "admin" && (
                  <Nav.Link as={Link} to="/createCourse">Add Course</Nav.Link>
               )}
-               {userType === "Admin" && (
+               {userType === "admin" && (
                  <Nav.Link as={Link} to="/allCourses">All Courses</Nav.Link>
               )}
             </Nav>
