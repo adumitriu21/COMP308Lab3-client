@@ -9,8 +9,8 @@ function Home(props)
 
     return (
         <div>
-            <h2> Lab2 - Adrian Dumitriu</h2>
-            <p>React front-end calls Express REST API with CRUD operations for Student and Course object.</p>
+            <h2> Lab3 - Adrian Dumitriu</h2>
+            <p>React front-end calls Express GraphQL API which exposes CRUD functionalities for a student/course system</p>
         </div>
     );
 

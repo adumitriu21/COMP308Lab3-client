@@ -5,7 +5,40 @@ import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
 //import withRouter from './withRouter';
 import { useNavigate } from 'react-router-dom';
+import { useMutation, gql } from '@apollo/client';
 
+
+const CREATE_STUDENT = gql`
+  mutation CreateStudent(
+    $firstName: String!
+    $lastName: String!
+    $email: String!
+    $password: String!
+    $studentId: Int!
+    $address: String
+    $city: String
+    $phone: String
+    $program: Program!
+    $semester: Int!
+    $startDate: Date!
+  ) {
+    createStudent(
+      firstName: $firstName
+      lastName: $lastName
+      email: $email
+      password: $password
+      studentId: $studentId
+      address: $address
+      city: $city
+      phone: $phone
+      program: $program
+      semester: $semester
+      startDate: $startDate
+    ) {
+      id
+    }
+  }
+`;
 //
 function AddStudent(props) {
   let navigate = useNavigate()
@@ -26,23 +59,34 @@ function AddStudent(props) {
     email: '', password: '', studentId: '', program: '', semester: '', startDate: ''
   });
   const [showLoading, setShowLoading] = useState(false);
-  const apiUrl = "http://localhost:3000/";
+  const [createStudent] = useMutation(CREATE_STUDENT);
 
-  const saveStudent = (e) => {
+  const saveStudent = async (e) => {
     setShowLoading(true);
     e.preventDefault();
-    const data = {
-      firstName: user.firstName, lastName: user.lastName,
-      address: user.address, city: user.city, phone: user.phone,
-      email: user.email, password: user.password, studentId: user.studentId,
-      program: user.program, semester: user.semester, startDate: user.startDate
+    const { firstName, lastName, email, password, studentId, address, city, phone, program, semester, startDate } = user;
+    const studentIdInt = parseInt(studentId, 10);
+    const semesterInt = parseInt(semester, 10);
+    
+    // Map human-readable program names to enum values
+    const programMapping = {
+      "Artificial Intelligence - Software Engineering Technology": "ARTIFICIAL_INTELLIGENCE_SOFTWARE_ENGINEERING_TECHNOLOGY",
+      "Automation and Robotics - Electro-Mechanical Engineering Technology": "AUTOMATION_AND_ROBOTICS_ELECTRO_MECHANICAL_ENGINEERING_TECHNOLOGY",
+      "Computer Systems Technology - Networking": "COMPUTER_SYSTEMS_TECHNOLOGY_NETWORKING",
+      "Game – Programming": "GAME_PROGRAMMING",
+      "Health Informatics Technology": "HEALTH_INFORMATICS_TECHNOLOGY",
+      "Software Engineering Technology": "SOFTWARE_ENGINEERING_TECHNOLOGY"
     };
-    //use promises
-    axios.post(apiUrl, data)
-      .then((result) => {
-        setShowLoading(false);
-        navigate('/show/' + result.data._id)
-      }).catch((error) => setShowLoading(false));
+    const programEnum = programMapping[program];
+
+    try {
+      await createStudent({ variables: { firstName, lastName, email, password, studentId: studentIdInt, address, city, phone, program: programEnum, semester: semesterInt, startDate } });
+      setShowLoading(false);
+      navigate('/');
+    } catch (error) {
+      setShowLoading(false);
+      console.log(error);
+    }
   };
   // handles onChange event
   const onChange = (e) => {
