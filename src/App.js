@@ -24,7 +24,6 @@ import CreateArticle from './components/CreateCourse';
 import AllCourses from './components/AllCourses';
 import Home from './components/Home';
 import Login from './components/Login';
-import axios from 'axios';
 import client from './components/apollo'
 //
 function App() {

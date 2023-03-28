@@ -1,51 +1,53 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React from 'react';
 import Spinner from 'react-bootstrap/Spinner';
 import Login from './Login';
 import { useNavigate } from 'react-router-dom';
 import '../App.css';
-//
-// this component displays a list of students
+import { useQuery, gql } from '@apollo/client';
+
+const GET_STUDENTS = gql`
+  query GetStudents {
+    students {
+      id
+      firstName
+      lastName
+      email
+      studentId
+      program
+      semester
+      startDate
+    }
+  }
+`;
+
 function StudentList() {
   let navigate = useNavigate();
 
-  const [data, setData] = useState([]);
-  const [showLoading, setShowLoading] = useState(true);
-  const apiUrl = "http://localhost:3000/students";
-
-  useEffect(() => {
-    const fetchData = async () => {
-      axios.get(apiUrl)
-        .then(result => {
-          console.log('result.data:', result.data)
-          //check if the user has logged in
-          if (result.data.screen !== 'auth') {
-
-            console.log('data in if:', result.data)
-            setData(result.data);
-            setShowLoading(false);
-          }
-        }).catch((error) => {
-          console.log('error in fetchData:', error)
-        });
-    };
-    fetchData();
-  }, []);
+  const { loading, error, data } = useQuery(GET_STUDENTS);
 
   const showDetail = (id) => {
     navigate('/show/' + id);
+  };
+
+  if (loading) {
+    return (
+      <Spinner animation="border" role="status">
+        <span className="sr-only">Loading...</span>
+      </Spinner>
+    );
+  }
+
+  if (error) {
+    console.error('Error fetching data:', error);
+    return <div>Error fetching data</div>;
   }
 
   return (
-
     <div>
-      {data.length !== 0
-        ? <div>
-          {showLoading && <Spinner animation="border" role="status">
-            <span className="sr-only">Loading...</span>
-          </Spinner>}
-          <table class="table">
-            <thead class="thead-dark">
+      {data.students.length !== 0 ? (
+        <div>
+          <table className="table">
+            <thead className="thead-dark">
               <tr>
                 <th scope="col">First Name</th>
                 <th scope="col">Last Name</th>
@@ -57,8 +59,8 @@ function StudentList() {
               </tr>
             </thead>
             <tbody>
-              {data.map((student) => (
-                <tr key={student._id} onClick={() => { showDetail(student._id) }}>
+              {data.students.map((student) => (
+                <tr key={student.id} onClick={() => showDetail(student.id)}>
                   <td>{student.firstName}</td>
                   <td>{student.lastName}</td>
                   <td>{student.email}</td>
@@ -71,13 +73,11 @@ function StudentList() {
             </tbody>
           </table>
         </div>
-        : < Login />
-      }
+      ) : (
+        <Login />
+      )}
     </div>
-  )
+  );
 }
 
-//
-      // withRouter will pass updated match, location, and history props 
-      // to the wrapped component whenever it renders.
-      export default StudentList;
+export default StudentList;

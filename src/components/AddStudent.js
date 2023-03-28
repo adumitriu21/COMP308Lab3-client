@@ -79,6 +79,7 @@ function AddStudent(props) {
     };
     const programEnum = programMapping[program];
 
+
     try {
       await createStudent({ variables: { firstName, lastName, email, password, studentId: studentIdInt, address, city, phone, program: programEnum, semester: semesterInt, startDate } });
       setShowLoading(false);
