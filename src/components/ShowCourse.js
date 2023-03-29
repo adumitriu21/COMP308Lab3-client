@@ -1,54 +1,58 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import Spinner from 'react-bootstrap/Spinner';
 import Button from 'react-bootstrap/Button';
-//import withRouter from './withRouter';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useQuery } from '@apollo/client';
+import { STUDENTS_ENROLLED } from '../graphql/queries';
 
-function ShowArticle(props) {
-  let navigate = useNavigate()
+function ShowCourse(props) {
+  let navigate = useNavigate();
   let { id } = useParams();
-  //
-  const [data, setData] = useState({});
   const [showLoading, setShowLoading] = useState(true);
-  const apiUrl = "http://localhost:3000/api/courses/" + id;
-
-  useEffect(() => {
-    setShowLoading(false);
-    const fetchData = async () => {
-      const result = await axios(apiUrl);
-      console.log('results from articles', result.data);
-
-      setData(result.data);
+  const [enrolledStudents, setEnrolledStudents] = useState([]);
+  const { loading, error, data } = useQuery(STUDENTS_ENROLLED, {
+    variables: { courseId: id },
+    onCompleted: (data) => {
       setShowLoading(false);
-    };
-
-    fetchData();
-  }, [apiUrl]);
+    },
+  });
 
   const editCourse = (id) => {
     navigate('/editCourse/' + id);
-
   };
 
+  if (loading || showLoading) {
+    return (
+      <Spinner animation="border" role="status">
+        <span className="sr-only">Loading...</span>
+      </Spinner>
+    );
+  }
 
+  if (error) {
+    return <div>Error: {error.message}</div>;
+  }
+
+  const students = data.course.studentsEnrolled;
+
+  
 
   return (
     <div>
-      {showLoading && <Spinner animation="border" role="status">
-        <span className="sr-only">Loading...</span>
-      </Spinner>}
-      <h1>Title: {data.title}</h1>
-      <p>Content: {data.description}</p>
-      <p>Number of Students Enrolled: {data.studentsEnrolled ? data.studentsEnrolled.length : 0}</p>
-
+      <h1>Title: {data.course.title}</h1>
+      <p>Content: {data.course.description}</p>
+      <p>Number of Students Enrolled: {students.length}</p>
+      <h2>Students Enrolled:</h2>
+      <ul>
+        {students.map((studentId) => (
+          <li key={studentId}>{studentId}</li>
+        ))}
+      </ul>
       <p>
-        <Button type="button" variant="primary" onClick={() => { editCourse(data._id) }}>Edit</Button>&nbsp;
-       
+        <Button type="button" variant="primary" onClick={() => { editCourse(data.course._id) }}>Edit</Button>&nbsp;
       </p>
     </div>
   );
 }
-// withRouter will pass updated match, location, and history props 
-// to the wrapped component whenever it renders.
-export default ShowArticle;
+
+export default ShowCourse;

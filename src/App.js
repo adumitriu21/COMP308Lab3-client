@@ -20,7 +20,7 @@ import AddStudent from './components/AddStudent';
 import ShowUser from './components/ShowUser';
 import ShowCourse from './components/ShowCourse';
 import CourseList from "./components/CourseList";
-import CreateArticle from './components/CreateCourse';
+import CreateCourse from './components/CreateCourse';
 import AllCourses from './components/AllCourses';
 import Home from './components/Home';
 import Login from './components/Login';
@@ -95,7 +95,7 @@ function logout() {
           <Route path="show/:id" element= {< ShowUser />}  />
           <Route path="showCourse/:id" element= {< ShowCourse />}  />
           <Route path="editCourse/:id" element= {< EditCourse />}  />
-          <Route path="createCourse" element= {< CreateArticle userName={userName} setUserName={setUserName} />}  />
+          <Route path="createCourse" element= {< CreateCourse userName={userName} setUserName={setUserName} />}  />
           <Route path="allCourses" element= {< AllCourses />}  />
 
         </Routes>

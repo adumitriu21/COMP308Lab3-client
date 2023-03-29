@@ -26,3 +26,36 @@ export const{
   }
 `
 };
+
+const COURSE_FIELDS = gql`
+  fragment CourseFields on Course {
+    _id
+    code
+    title
+    description
+    semester
+    section
+  }
+`;
+
+export const ADD_COURSE = gql`
+  mutation AddCourse($studentId: ID!, $courseId: ID!) {
+    addCourse(studentId: $studentId, courseId: $courseId) {
+      ...CourseFields
+    }
+  }
+  ${COURSE_FIELDS}
+`;
+
+export const DROP_COURSE = gql`
+  mutation DropCourse($studentId: ID!, $courseId: ID!) {
+    dropCourse(studentId: $studentId, courseId: $courseId) {
+      _id
+      code
+      title
+      description
+      semester
+      section
+    }
+  }
+`;

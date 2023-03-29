@@ -1,6 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useQuery, useMutation, gql } from '@apollo/client';
 import { Button } from 'react-bootstrap';
+import Spinner from 'react-bootstrap/Spinner';
+import { GET_COURSES, GET_MY_COURSES } from '../graphql/queries';
+import { ADD_COURSE, DROP_COURSE } from '../graphql/mutations'
 
 //
 
@@ -9,65 +13,148 @@ const CourseList = ({ studentObjId }) => {
   const [message, setMessage] = useState('');
   const [availableCourses, setAvailableCourses] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState('');
+  const [loading, setLoading] = useState(true);
 
+  const { loading: coursesLoading, error: coursesError, data:courseData } = useQuery(GET_COURSES);
+  const { loading: myCoursesLoading, error: myCoursesError, data: myCoursesData, refetch } = useQuery(GET_MY_COURSES, {
+    variables: { studentId: studentObjId },
+    onCompleted: (myCoursesData) => {
+      setCourses(myCoursesData.myCourses);
+    },
+  });
+
+  const [addCourseMutation] = useMutation(ADD_COURSE, {
+    update(cache, { data: { addCourse } }) {
+      cache.modify({
+        fields: {
+          courses(existingCourses = []) {
+            const newCourseRef = cache.writeFragment({
+              data: addCourse,
+              fragment: gql`
+                fragment NewCourse on Course {
+                  id
+                  code
+                  title
+                  description
+                  semester
+                  section
+                }
+              `
+            });
+            return [...existingCourses, newCourseRef];
+          }
+        }
+      });
+      setAvailableCourses(prevCourses => prevCourses.filter(course => course.id !== addCourse.id));
+      setCourses(prevCourses => [...prevCourses, addCourse]);
+    }
+  });
+
+
+  const [removeCourseMutation] = useMutation(DROP_COURSE, {
+
+    update(cache, { data: { deleteCourse } }) {
+      const deletedCourseId = deleteCourse;
+      cache.modify({
+        fields: {
+          courses(existingCourses = []) {
+            return existingCourses.filter(courseRef => courseRef.__ref !== `Course:${deletedCourseId}`);
+          }
+        }
+      });
+      const updatedCourses = courses.filter((course) => course.id !== deletedCourseId);
+      setCourses(updatedCourses);
+    },
+    onCompleted(myCourseData) {
+      // refetch the data after the mutation has completed
+      refetch();
+    }
+  });
 
   useEffect(() => {
-    const fetchCourses = async () => {
-      const response = await axios.get(`/api/myCourses/${studentObjId}`);
-      const response1 = await axios.get('/api/courses');
-      setCourses(response.data);
-      setAvailableCourses(response1.data)
-    };
+    if (courseData) {
+      setAvailableCourses(courseData.courses);
+      setLoading(false);
+    }
+  }, [courseData]);
 
-    fetchCourses();
-  }, [studentObjId]);
+  useEffect(() => {
+    if (myCoursesData) {
+      setCourses(myCoursesData.myCourses);
+      setLoading(false);
+    }
+  }, [myCoursesData]);
 
   const removeStudentFromCourse = async (studentObjId, courseObjId) => {
     try {
-      await axios.put(`/api/myCourses/${studentObjId}`, { courseId: courseObjId });
+      await removeCourseMutation({
+        variables: {
+          courseId: courseObjId,
+          studentId: studentObjId
+        }
+      });
       setMessage(`Student ${studentObjId} removed from course ${courseObjId}`);
-      const updatedCourses = courses.filter((course) => course._id !== courseObjId);
+
+      const updatedCourses = courses.filter((course) => course.id !== courseObjId);
       setCourses(updatedCourses);
     } catch (error) {
       console.error(error);
     }
   };
 
-  const handleDropCourse = async (studentId, courseId) => {
-    if (window.confirm("Are you sure you want to drop this course?")) {
-      await removeStudentFromCourse(studentId, courseId);
-
-    }
-  }
-
   const handleSelectChange = (event) => {
     setSelectedCourse(event.target.value);
   };
-
   const handleAddCourse = async () => {
-    console.log("sutdent ID from react: " + studentObjId)
-    console.log("course ID from react: " + selectedCourse)
     try {
-      const response = await axios.put(`/api/addCourse/${studentObjId}`, { courseId: selectedCourse });
-
-
-      // Check if the response contains an error message
-      if (response.status === 400) {
-        throw new Error("Already enrolled in this course!");
-      }
-
-      const newAddedCourse = response.data
-      setCourses([...courses, newAddedCourse])
-
-      setMessage(`Course ${newAddedCourse.title} added!`);
-
+      const { data } = await addCourseMutation({
+        variables: {
+          studentId: studentObjId,
+          courseId: selectedCourse,
+        },
+      });
+      setMessage(`Course ${data.addCourse.title} added!`);
+      refetch();
     } catch (error) {
       console.error(error);
       setMessage("Already enrolled in this course!")
     }
-
-    console.log(`Course ${selectedCourse} added`);
   };
+
+  const handleDropCourse = async (studentId, courseId) => {
+    if (window.confirm("Are you sure you want to drop this course?")) {
+      try {
+        await removeStudentFromCourse(studentId, courseId);
+        setMessage(`Student ${studentId} removed from course ${courseId}`);
+
+      } catch (error) {
+        console.error(error);
+      }
+    }
+  };
+
+  if (coursesLoading) {
+    return (
+      <Spinner animation="border" role="status">
+        <span className="sr-only">Loading...</span>
+      </Spinner>
+    );
+  }
+
+  if (coursesError) {
+    return <div>Error: {coursesError.message}</div>;
+  }
+  if (myCoursesLoading) {
+    return (
+      <Spinner animation="border" role="status">
+        <span className="sr-only">Loading...</span>
+      </Spinner>
+    );
+  }
+
+  if (myCoursesError) {
+    return <div>Error: {myCoursesError.message}</div>;
+  }
 
   return (
     <div>
@@ -103,12 +190,13 @@ const CourseList = ({ studentObjId }) => {
         <select value={selectedCourse} onChange={handleSelectChange}>
           <option value="">Select Course</option>
           {availableCourses.map((course) => (
-            <option key={course._id} value={course._id.toString()}>
+            <option key={course._id} value={course._id}>
               {course.code} {course.title} Sec:{course.section}
             </option>
           ))}
+  
         </select>
-        <Button variant="primary" size="lg" style={{ marginLeft: "30px"}}
+        <Button variant="primary" size="lg" style={{ marginLeft: "30px" }}
           onClick={handleAddCourse} disabled={!selectedCourse} >
           Add Course
         </Button>
@@ -117,7 +205,7 @@ const CourseList = ({ studentObjId }) => {
 
       {/* Display the message */}
       {message &&
-        <h6 style={{ color: 'red', fontWeight: 'bold', fontSize: '1.2em', marginTop: '20px'}}>
+        <h6 style={{ color: 'red', fontWeight: 'bold', fontSize: '1.2em', marginTop: '20px' }}>
           {message}
         </h6>}
     </div>
